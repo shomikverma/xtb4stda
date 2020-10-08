@@ -5,7 +5,7 @@
 
 This project provides `xtb4stda`, a program to calculate the ground state with
 sTDA-xTB to be used in further [`stda`](https://github.com/grimme-lab/stda)
-calculations.
+calculations. This fork provides functionality for MACOS.
 
 ## Installation
 
@@ -20,7 +20,7 @@ To trigger the build run in the root directory
 make
 ```
 
-You will find a statically linked executable in `exe/xtb4stda`.
+You will find a statically linked executable in `xtb4stda`.
 To make `xtb4stda` accessible export
 
 ```bash
