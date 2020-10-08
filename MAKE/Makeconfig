@@ -29,7 +29,7 @@ USE_DEPENDENCIES := yes
 DEP_MAKEFILE_DEP := no
 
 # choose your compiler here (you can choose LINUXI)
-OSTYPE := LINUXI
+OSTYPE := MACOS
 
 ###------------------------------------------------------------------------###
 # put all files to appropiate places

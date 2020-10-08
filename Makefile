@@ -1,149 +1,59 @@
-#!/bin/env make
-# 
-# created by Sebastian Ehlert in March 2018 (v 2.1)
-# 2.0: recreated from scratch
-# 2.1: refined the generation of dependencies, since it crashed if not
-#      done in the main directory
-#
-###------------------------------------------------------------------------###
-# a nice trick to print all 'important' targets this Makefile can produce
-.PHONY: help
 
-# would be made by default if there is no .DEFAULT_GOAL set
-help:
-	@echo "This Makefile kindly provides to you:"                     && \
-	$(MAKE) --print-data-base --question |                               \
-	awk '/^[^.%][-A-Za-z0-9]*:/ {print substr($$1, 1, length($$1)-1)}' | \
-	sort | pr --omit-pagination --width=80 --columns=4
+PROG    = xtb4stda
 
-##############################################################################
-## this file is part of the xtb build system                                ##
-## for more information on this have a look in the AK-Wiki or               ##
-## consult the README in MAKE/                                              ##
-##############################################################################
+OSTYPE=MACOS
+#--------------------------------------------------------------------------
 
-###------------------------------------------------------------------------###
-# specifiy where you are in the source tree
-MAINDIR := .
-# here resides the build system
-MAKEDIR := $(MAINDIR)/MAKE
+#-------------------------------------------------------------------------
 
-include $(MAKEDIR)/Makeconfig
+ifeq ($(OSTYPE),LINUXI)
+   FC = ifort
+  # FC = lfc
+   CC = gcc
 
-##############################################################################
-## put all programs here, we use this silly syntax for you, to comment
-## out parts of it more easily
-PROGRAMS := xtb4stda
-###------------------------------------------------------------------------###
-# initialized empty, then incremental build up for easy commenting
-SCRIPTS := 
-###------------------------------------------------------------------------###
-# initialized empty, then incremental build up for easy commenting
-PARAMETER :=
-PARAMETER += .param_gbsa_acetone
-PARAMETER += .param_gbsa_acetonitrile
-PARAMETER += .param_gbsa_benzene
-PARAMETER += .param_gbsa_ch2cl2
-PARAMETER += .param_gbsa_chcl3
-PARAMETER += .param_gbsa_cs2
-PARAMETER += .param_gbsa_dmso
-PARAMETER += .param_gbsa_ether
-PARAMETER += .param_gbsa_h2o
-PARAMETER += .param_gbsa_methanol
-PARAMETER += .param_gbsa_thf
-PARAMETER += .param_gbsa_toluene
-PARAMETER += .param_stda1.xtb
-PARAMETER += .param_stda2.xtb
-##############################################################################
-## only edit below if you know what you are doing                           ##
-##############################################################################
+  ### multithread ###
+   LINKER = ifort -static -qopenmp  -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include
+    LIBS = $(MKLROOT)/lib/intel64/libmkl_blas95_lp64.a $(MKLROOT)/lib/intel64/libmkl_lapack95_lp64.a -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a $(MKLROOT)/lib/intel64/libmkl_core.a $(MKLROOT)/lib/intel64/libmkl_intel_thread.a -Wl,--end-group -lpthread -lm
 
-###------------------------------------------------------------------------###
-# set the targets
-.PHONY: all main libs progs pack setup depend clean distclean veryclean
-.PHONY: $(PROGRAMS)
+  ### sequential ###
+  # LINKER = ifort -static
+  # LIBS = ${MKLROOT}/lib/intel64/libmkl_blas95_lp64.a ${MKLROOT}/lib/intel64/libmkl_lapack95_lp64.a -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a $(MKLROOT)/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm
 
-# this is the first, so it would be made by default
-all: setup libs progs
+   CFLAGS = -O -DLINUX
+   FFLAGS = -O3 -qopenmp -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include
+endif
 
-# it may not be desireable to make all as default,
-# therefore, we set xtb as default
-.DEFAULT_GOAL = main
-main: setup $(EXEDIR)/xtb4stda
+ifeq ($(OSTYPE),MACOS)
+    FC = ifort
+    CC = gcc
+    LINKER = ifort  -qopenmp  -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include
+    LIBS =  ${MKLROOT}/lib/libmkl_blas95_lp64.a ${MKLROOT}/lib/libmkl_intel_lp64.a ${MKLROOT}/lib/libmkl_intel_thread.a ${MKLROOT}/lib/libmkl_core.a -liomp5 -lpthread -lm -ldl
+    PREFLAG = -E -P
+    FFLAGS = -O3 -qopenmp -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include #-check all
+    FFLAGS = -O3  -I${MKLROOT}/include/intel64/lp64 -I${MKLROOT}/include
+    CCFLAGS = -O3 -DLINUX
+endif
 
-###------------------------------------------------------------------------###
-# generate the name of the program and the library
-LIBNAME  := $(patsubst %,$(LIBDIR)/lib%.a,$(PROGRAMS))
-PROGNAME := $(patsubst %,$(EXEDIR)/%,$(PROGRAMS))
-# this might be buggy, so don't use
-#ifeq ($(BUILD_IN_BIN),yes)
-#   PROGNAME := $(patsubst %, $(HOME)/bin/$(NAME), $(PROGRAMS))
-#endif # BIN
-# everything should also dependent on the local Makefile
-ifeq ($(MAKEFILE_DEP),yes)
-   MAKEDEP := Makefile
-endif # DEP
+#################################################
+OBJS=\
+     asym.o atovlp.o axis.o axis2.o axis3.o blckmgs.o block.o\
+		 blowsy.o cm5.o copyc6.o dftd3.o dipole.o drsp.o dtrafo.o dtrafo2.o elem.o fermi.o\
+		 foden.o fragment.o gauss.o gbobc.o gover.o iniq.o intpack.o lin.o local.o\
+		 lopt.o main.o makel.o matinv.o molbld.o ncoord.o ncoord2.o\
+		 neighbor.o onetri.o out.o pop.o pqn.o printbas.o printmold.o printmos.o\
+		 prmat.o qsort.o rdcoord2.o readl.o readl2.o readparam.o setmetal.o setwll.o\
+		 shifteps.o shiftlp.o spline.o spline2.o splitmol.o symtranslib.o timing.o\
+		 uxtb.o valel.o warn.o wrc0.o wrcoord.o wren.o wrxyz.o xbasis.o xtb.o zmatpr.o
+%.o: %.f90
+	@echo "making $@ from $<"
+	$(FC) $(FFLAGS) -c $< -o $@
+%.o: %.f
+	@echo "making $@ from $<"
+	$(FC) $(FFLAGS) -c $< -o $@
 
-###------------------------------------------------------------------------###
-# there is also the possibility to pack the xtb via the Makefile
-pack: all
-	tar czvf xtb4stda-$$(date +'%y%m%d').tgz \
-		$(PROGNAME)\
-		$(patsubst %,$(MAINDIR)/scripts/%,$(SCRIPTS))\
-		$(PARAMETER)\
-		README.md\
-		COPYING\
-		COPYING.LESSER\
-		.xtb4stdarc
+$(PROG):     $(OBJS)
+		@echo  "Loading $(PROG) ... "
+		@$(LINKER) $(OBJS) $(LIBS) -o $(PROG)
 
-###------------------------------------------------------------------------###
-# set up all directories
-setup: $(EXEDIR) $(LIBDIR) $(MODDIR) $(OUTDIR) $(DEPDIR)
-
-$(EXEDIR):
-	@echo "creating directory for executables"  && \
-	mkdir -p $@
-
-$(LIBDIR):
-	@echo "creating directory for libraries"    && \
-	mkdir -p $@
-
-$(MODDIR):
-	@echo "creating directory for modules"      && \
-	mkdir -p $@
-
-$(OUTDIR):
-	@echo "creating directory for object files" && \
-	mkdir -p $@
-
-$(DEPDIR):
-	@echo "creating directory for dependencies" && \
-	mkdir -p $@
-
-###------------------------------------------------------------------------###
-# set up the targets for all
-program: $(PROGNAME)
-
-library: $(LIBNAME)
-
-###------------------------------------------------------------------------###
-# now the rules to actually start the submakefiles
-$(EXEDIR)/xtb4stda:
-	$(MAKE) -C src program
-
-$(LIBDIR)/libxtb4stda.a:
-	$(MAKE) -C src library
-
-###------------------------------------------------------------------------###
-# clean up, at the right places
 clean:
-	$(RM) $(OUTDIR)/*.o
-
-distclean: veryclean
-	$(RM) $(MODDIR)/*.mod $(PROGNAME) $(LIBNAME)
-
-# in case you use the dependency build you can get rid of those files to
-veryclean: clean
-	$(RM) $(DEPDIR)/*.d
-
-###------------------------------------------------------------------------###
+	rm -f *.o *.mod $(PROG)

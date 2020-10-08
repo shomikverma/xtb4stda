@@ -1,5 +1,5 @@
 #!/bin/env make
-# 
+#
 # created by Sebastian Ehlert in March 2018 (v 2.2)
 # 2.0: recreated from scratch
 # 2.1: refined the generation of dependencies, since it crashed if not
@@ -65,6 +65,43 @@ FLFLAGS += -Wl,--start-group     \
            -Wl,--end-group
 
 endif # LINUXI
+
+ifeq ($(OSTYPE),MACOS)
+FC := ifort
+CC := gcc
+
+# compile flags
+FCFLAGS := -O -axAVX -qopenmp -r8
+FCFLAGS += -module $(MODDIR)
+FCFLAGS += -I$(INCDIR)                       \
+           -I$(MKLROOT)/include/intel64/lp64 \
+           -I$(MKLROOT)/include
+CCFLAGS := -O -DLINUX
+CCFLAGS += -D_Float128=__float128
+# check for debug build
+ifeq ($(DEBUG_BUILD),yes)
+FCFLAGS += -g -traceback -check all -debug all
+CCFLAGS += -g -DEBUG
+endif # DEBUG
+
+# linker
+FL := ifort
+# general flags for linking, this is build incremental to get an overview
+FLFLAGS := -qopenmp  -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include
+# add path to libraries
+FLFLAGS += -L$(MKLROOT)/lib \
+           -L$(LIBDIR)
+# add path to modules
+FLFLAGS += -module $(MODDIR)
+# add path to include files
+FLFLAGS += -I$(MKLROOT)/include/intel64/lp64 \
+           -I$(MKLROOT)/include
+# add special linker options for the MKL library
+FLFLAGS += -I${MKLROOT}/lib/libmkl_intel_lp64.a \
+           -I${MKLROOT}/lib/libmkl_intel_thread.a \
+					 -I${MKLROOT}/lib/libmkl_core.a
+
+endif # MACOS
 
 ###------------------------------------------------------------------------###
 # set the targets
@@ -138,7 +175,7 @@ $(PROGNAME): $(LIBNAME) $(OBJSP)
 $(OUTDIR)/%.o: %.f $(MAKEDEP)
 	@echo "making $@ from $<" && \
 	$(FC) $(FCFLAGS) -c $< -o $@
-	
+
 $(OUTDIR)/%.o: %.f90 $(MAKEDEP)
 	@echo "making $@ from $<" && \
 	$(FC) $(FCFLAGS) -c $< -o $@
@@ -189,4 +226,3 @@ distclean:
 # in case you use the dependency build you can get rid of those files to
 veryclean: distclean
 	$(RM) $(DEPDIR)/*.d
-
