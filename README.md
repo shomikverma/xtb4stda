@@ -25,7 +25,7 @@ To make `xtb4stda` accessible export
 
 ```bash
 export XTB4STDAHOME=$PWD
-export PATH=$PATH:XTB4STDAHOME/exe
+export PATH=$PATH:$XTB4STDAHOME
 ```
 
 For parallel usage set the threads for OMP and the MKL linear algebra backend by
